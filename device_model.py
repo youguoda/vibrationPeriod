@@ -313,7 +313,7 @@ class DeviceModel:
 
     # 数据解析
     def processData(self, length):
-        # 从读取指令中获得起始寄存器 （处理回传数据需要用到）
+        # 从读取指令中获得起始寄存器
         if self.statReg is not None:
             for i in range(int(length / 2)):
                 # print(self.statReg)
@@ -324,52 +324,25 @@ class DeviceModel:
                 # 振动加速度解析
                 if 0x34 <= self.statReg <= 0x36:
                     value = value / 32768 * 16
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(52 + (self.statReg - 0x34)), value)  # 额外存储十进制值
+                    self.set(str(self.statReg), value)
                     self.statReg += 1
 
                 # 振动角速度解析
                 elif 0x37 <= self.statReg <= 0x39:
                     value = value / 32768 * 2000
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(55 + (self.statReg - 0x37)), value)  # 额外存储十进制值
-                    self.statReg += 1
-                    
-                # 振动速度解析
-                elif 0x3A <= self.statReg <= 0x3C:
-                    value = value / 32768 * 100  # 转换为mm/s
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(58 + (self.statReg - 0x3A)), value)  # 额外存储十进制值
+                    self.set(str(self.statReg), value)
                     self.statReg += 1
 
                 # 振动角度解析
                 elif 0x3D <= self.statReg <= 0x3F:
                     value = value / 32768 * 180
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(61 + (self.statReg - 0x3D)), value)  # 额外存储十进制值
+                    self.set(str(self.statReg), value)
                     self.statReg += 1
-
                 # 温度解析
                 elif self.statReg == 0x40:
                     value = value / 100
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(64), value)  # 额外存储十进制值
+                    self.set(str(self.statReg), value)
                     self.statReg += 1
-
-                # 振动位移解析
-                elif 0x41 <= self.statReg <= 0x43:
-                    value = value / 32768 * 1000  # 转换为um
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(65 + (self.statReg - 0x41)), value)  # 额外存储十进制值
-                    self.statReg += 1
-
-                # 振动频率解析
-                elif 0x44 <= self.statReg <= 0x46:
-                    value = value / 32768 * 1000  # 转换为Hz
-                    self.set(str(self.statReg), value)  # 存储十六进制值
-                    self.set(str(68 + (self.statReg - 0x44)), value)  # 额外存储十进制值
-                    self.statReg += 1
-
                 # 其他
                 else:
                     self.set(str(self.statReg), value)
