@@ -86,9 +86,9 @@ class VibrationMonitor(QMainWindow):
 
         #  报警阈值字典 (根据实际情况调整这些值)
         self.thresholds = {
-            'speed_x': 20.0, 'speed_y': 20.0, 'speed_z': 25.0,  # 速度阈值
-            'disp_x': 100.0, 'disp_y': 100.0, 'disp_z': 150.0, # 位移阈值
-            'freq_x': 55.0,  'freq_y': 55.0,  'freq_z': 65.0   # 频率阈值
+            'speed_x': 20, 'speed_y': 20, 'speed_z': 25,  # 速度阈值
+            'disp_x': 100, 'disp_y': 100, 'disp_z': 150, # 位移阈值
+            'freq_x': 55,  'freq_y': 55,  'freq_z': 65   # 频率阈值
         }
 
     def create_plot_widget(self, title, y_label, y_units):
@@ -242,10 +242,10 @@ class VibrationMonitor(QMainWindow):
         main_layout.addLayout(table_layout)
 
 
-    def safe_float(self, value, default=0.0):
-        """安全地将值转换为浮点数,如果转换失败则返回默认值"""
+    def safe_int(self, value, default=0.0):
+        """安全地将值转换为整数,如果转换失败则返回默认值"""
         try:
-            return float(value)
+            return int(value)
         except (TypeError, ValueError):
             return default
 
@@ -253,15 +253,15 @@ class VibrationMonitor(QMainWindow):
         """更新数据"""
         try:
             # 获取数据并转换为浮点数
-            vib_x = self.safe_float(data_values.get("58"))
-            vib_y = self.safe_float(data_values.get("59"))
-            vib_z = self.safe_float(data_values.get("60"))
-            disp_x = self.safe_float(data_values.get("65"))
-            disp_y = self.safe_float(data_values.get("66"))
-            disp_z = self.safe_float(data_values.get("67"))
-            freq_x = self.safe_float(data_values.get("68"))
-            freq_y = self.safe_float(data_values.get("69"))
-            freq_z = self.safe_float(data_values.get("70"))
+            vib_x = self.safe_int(data_values.get("58"))
+            vib_y = self.safe_int(data_values.get("59"))
+            vib_z = self.safe_int(data_values.get("60"))
+            disp_x = self.safe_int(data_values.get("65"))
+            disp_y = self.safe_int(data_values.get("66"))
+            disp_z = self.safe_int(data_values.get("67"))
+            freq_x = self.safe_int(data_values.get("68"))
+            freq_y = self.safe_int(data_values.get("69"))
+            freq_z = self.safe_int(data_values.get("70"))
 
             # 更新时间戳(使用时间间隔)
             current_time = datetime.now().timestamp()
@@ -306,15 +306,15 @@ class VibrationMonitor(QMainWindow):
     def update_data_table(self, vib_x, vib_y, vib_z, disp_x, disp_y, disp_z, freq_x, freq_y, freq_z):
         """更新实时数据表格"""
         # 设置表格的值
-        self.data_table.setItem(0, 1, QTableWidgetItem(f"{vib_x:.2f}"))
-        self.data_table.setItem(0, 2, QTableWidgetItem(f"{vib_y:.2f}"))
-        self.data_table.setItem(0, 3, QTableWidgetItem(f"{vib_z:.2f}"))
-        self.data_table.setItem(1, 1, QTableWidgetItem(f"{disp_x:.2f}"))
-        self.data_table.setItem(1, 2, QTableWidgetItem(f"{disp_y:.2f}"))
-        self.data_table.setItem(1, 3, QTableWidgetItem(f"{disp_z:.2f}"))
-        self.data_table.setItem(2, 1, QTableWidgetItem(f"{freq_x:.2f}"))
-        self.data_table.setItem(2, 2, QTableWidgetItem(f"{freq_y:.2f}"))
-        self.data_table.setItem(2, 3, QTableWidgetItem(f"{freq_z:.2f}"))
+        self.data_table.setItem(0, 1, QTableWidgetItem(f"{vib_x}"))
+        self.data_table.setItem(0, 2, QTableWidgetItem(f"{vib_y}"))
+        self.data_table.setItem(0, 3, QTableWidgetItem(f"{vib_z}"))
+        self.data_table.setItem(1, 1, QTableWidgetItem(f"{disp_x}"))
+        self.data_table.setItem(1, 2, QTableWidgetItem(f"{disp_y}"))
+        self.data_table.setItem(1, 3, QTableWidgetItem(f"{disp_z}"))
+        self.data_table.setItem(2, 1, QTableWidgetItem(f"{freq_x}"))
+        self.data_table.setItem(2, 2, QTableWidgetItem(f"{freq_y}"))
+        self.data_table.setItem(2, 3, QTableWidgetItem(f"{freq_z}"))
 
         #  报警逻辑
         data = [
