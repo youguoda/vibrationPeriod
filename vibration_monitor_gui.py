@@ -1,7 +1,8 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                            QHBoxLayout, QLabel, QGridLayout, QGroupBox, QTableWidget,
-                           QTableWidgetItem, QPushButton, QMessageBox)
+                           QTableWidgetItem, QPushButton, QMessageBox, QTabWidget,
+                           QComboBox) #新增 QTabWidget, QComboBox
 from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QPalette, QColor, QFont, QBrush
 import pyqtgraph as pg
@@ -10,6 +11,8 @@ from datetime import datetime
 import device_model  # 假设这是你的设备模型
 import time
 import csv
+from scipy.fft import fft, fftfreq # 新增
+
 
 # DataRecorder 类, 处理CSV文件写入 (保持不变,但会记录加速度)
 class DataRecorder:
@@ -64,8 +67,109 @@ class DataRecorder:
             except Exception as e:
                 print(f"写入CSV数据失败: {e}")
 
+# --- AnalysisWindow 类 (新的高级分析窗口) ---
+class AnalysisWindow(QMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("高级数据分析")
+        self.setGeometry(200, 200, 800, 600)
+        self.main_data_cache = {}  # 用于存储从主窗口传递来的数据
+        self.init_ui()
 
-# 定义一个信号,用于传递数据 (保持基本结构,但传递的数据项会改变)
+    def init_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        
+        # 创建选项卡
+        self.tab_widget = QTabWidget()
+        main_layout.addWidget(self.tab_widget)
+
+        # 1. FFT 分析选项卡
+        self.fft_tab = QWidget()
+        self.tab_widget.addTab(self.fft_tab, "FFT 分析")
+        self.setup_fft_tab()
+        
+        # 2. 趋势预测选项卡 (预留)
+        self.trend_tab = QWidget()
+        self.tab_widget.addTab(self.trend_tab, "趋势预测")
+        # 在这里添加趋势预测相关的控件和布局
+
+        # 3. 其他分析选项卡 (预留)
+        # 可以根据需要添加更多选项卡
+
+    def setup_fft_tab(self):
+        fft_layout = QVBoxLayout(self.fft_tab)
+
+        # 参数选择 (例如选择哪个轴、哪个参数进行FFT分析)
+        param_layout = QHBoxLayout()
+        param_label = QLabel("选择参数:")
+        self.param_combo = QComboBox()
+        #参数列表与主窗口保持一致
+        self.param_combo.addItems([
+            '加速度X', '加速度Y', '加速度Z',
+            '速度X', '速度Y', '速度Z',
+            '位移X', '位移Y', '位移Z',
+            '频率X', '频率Y', '频率Z',
+            '温度'      # 假设你也需要温度的统计信息,虽然只有一个值
+        ])
+
+        param_layout.addWidget(param_label)
+        param_layout.addWidget(self.param_combo)
+        fft_layout.addLayout(param_layout)
+
+
+        # FFT 图表
+        self.fft_plot = pg.PlotWidget()
+        self.fft_plot.setBackground('w')
+        self.fft_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.fft_plot.setLabel('left', "幅度")
+        self.fft_plot.setLabel('bottom', "频率", units='Hz')
+        self.fft_curve = self.fft_plot.plot(pen=pg.mkPen('b', width=2))  # 默认蓝色
+        fft_layout.addWidget(self.fft_plot)
+
+        # 分析按钮
+        analyze_button = QPushButton("进行 FFT 分析")
+        analyze_button.clicked.connect(self.perform_fft)
+        fft_layout.addWidget(analyze_button)
+
+
+    def perform_fft(self):
+        #选择的数据序列
+        selected_param = self.param_combo.currentText()
+        if selected_param not in self.main_data_cache:
+            QMessageBox.warning(self, "警告", "没有选择数据,请先返回主界面采集")
+            return
+        time_data = self.main_data_cache.get("timestamps")
+        series_data = self.main_data_cache.get(selected_param)
+
+        if not time_data or not series_data:
+             QMessageBox.warning(self,"警告","数据不足,请返回主界面采集")
+             return
+
+        #进行FFT
+        N = len(series_data)
+        if N == 0:
+            QMessageBox.warning(self, "警告", "没有数据可供分析！")
+            return
+
+        yf = fft(series_data)
+        xf = fftfreq(N, time_data[1] - time_data[0])
+
+        #只取正频率部分
+        xf_pos = xf[:N//2]
+        yf_pos = np.abs(yf[0:N//2])
+
+        self.fft_curve.setData(xf_pos,yf_pos)
+
+
+    def receive_data_from_main(self, data_cache):
+        """接收来自主窗口的数据"""
+        self.main_data_cache = data_cache
+        # 更新参数选择下拉框 (可选)
+        # keys = list(data_cache.keys())
+        # self.param_combo.clear()
+        # self.param_combo.addItems(keys)
 class DataSignal(QThread):
     data_signal = pyqtSignal(dict)
 
@@ -112,7 +216,10 @@ class DataSignal(QThread):
           self.wait()
 
 
+# --- VibrationMonitor 类 (修改后的主窗口) ---
 class VibrationMonitor(QMainWindow):
+    data_to_analysis = pyqtSignal(dict)  # 用于向分析窗口传递数据的信号
+
     def __init__(self, device):
         super().__init__()
         self.device = device
@@ -121,7 +228,7 @@ class VibrationMonitor(QMainWindow):
         self.data_thread.data_signal.connect(self.update_data)
         self.data_thread.start()
 
-        # 数据缓存
+           # 数据缓存
         self.data_length = 500
         self.timestamps = []
         # 加速度数据
@@ -133,7 +240,7 @@ class VibrationMonitor(QMainWindow):
         self.vib_speed_y = []
         self.vib_speed_z = []
 
-        
+
 
         # 振动位移数据
         self.vib_disp_x = []
@@ -165,6 +272,10 @@ class VibrationMonitor(QMainWindow):
             'freq_x': 55.0,  'freq_y': 55.0,  'freq_z': 65.0,
             'temperature':50.0
         }
+
+        # 创建高级分析窗口的实例
+        self.analysis_window = AnalysisWindow()
+        self.data_to_analysis.connect(self.analysis_window.receive_data_from_main)
 
     def create_plot_widget(self, title, y_label, y_units):
         plot = pg.PlotWidget(title=title)
@@ -346,6 +457,11 @@ class VibrationMonitor(QMainWindow):
         self.record_button.clicked.connect(self.toggle_recording)
         button_layout.addWidget(self.record_button)
 
+          # 添加 "高级分析" 按钮
+        self.analysis_button = QPushButton("高级分析")
+        self.analysis_button.clicked.connect(self.open_analysis_window)
+        button_layout.addWidget(self.analysis_button)
+
         # 添加一个弹性的间隔, 将按钮推到顶部
         button_layout.addStretch()
 
@@ -487,7 +603,7 @@ class VibrationMonitor(QMainWindow):
           self.data_table.setItem(4,5,status_item)
           self.data_table.setItem(row_index,6,QTableWidgetItem(str(threshold)if threshold is not None else '-'))
           continue
-        
+
         # 其他参数报警逻辑
         for col_index in range(1, 4):
 
@@ -507,43 +623,64 @@ class VibrationMonitor(QMainWindow):
 
 
     def update_stats_table(self):
-      data_series = [
-        self.accel_x, self.accel_y, self.accel_z,
-        self.vib_speed_x, self.vib_speed_y, self.vib_speed_z,
-        self.vib_disp_x, self.vib_disp_y, self.vib_disp_z,
-        self.vib_freq_x, self.vib_freq_y, self.vib_freq_z,
-        self.temperature_data
-    ]
-      for i, series in enumerate(data_series):
-        if series:
-            max_val = max(series)
-            min_val = min(series)
-            avg_val = sum(series) / len(series)
-            self.stats_table.setItem(i,1,QTableWidgetItem(f"{max_val:.2f}"))
-            self.stats_table.setItem(i,2,QTableWidgetItem(f"{min_val:.2f}"))
-            self.stats_table.setItem(i,3,QTableWidgetItem(f"{avg_val:.2f}"))
-        else:
-            self.stats_table.setItem(i, 1, QTableWidgetItem("-"))
-            self.stats_table.setItem(i, 2, QTableWidgetItem("-"))
-            self.stats_table.setItem(i, 3, QTableWidgetItem("-"))
+            data_series = [
+                self.accel_x, self.accel_y, self.accel_z,
+                self.vib_speed_x, self.vib_speed_y, self.vib_speed_z,
+                self.vib_disp_x, self.vib_disp_y, self.vib_disp_z,
+                self.vib_freq_x, self.vib_freq_y, self.vib_freq_z,
+                self.temperature_data
+            ]
+            for i, series in enumerate(data_series):
+                if series:
+                    max_val = max(series)
+                    min_val = min(series)
+                    avg_val = sum(series) / len(series)
+                    self.stats_table.setItem(i,1,QTableWidgetItem(f"{max_val:.2f}"))
+                    self.stats_table.setItem(i,2,QTableWidgetItem(f"{min_val:.2f}"))
+                    self.stats_table.setItem(i,3,QTableWidgetItem(f"{avg_val:.2f}"))
+                else:
+                    self.stats_table.setItem(i, 1, QTableWidgetItem("-"))
+                    self.stats_table.setItem(i, 2, QTableWidgetItem("-"))
+                    self.stats_table.setItem(i, 3, QTableWidgetItem("-"))
 
 
     def update_plots(self):
-        # 加速度曲线
-        self.accel_x_curve.setData(self.timestamps, self.accel_x)
-        self.accel_y_curve.setData(self.timestamps, self.accel_y)
-        self.accel_z_curve.setData(self.timestamps, self.accel_z)
-        # 其他曲线
-        self.speed_x_curve.setData(self.timestamps, self.vib_speed_x)
-        self.speed_y_curve.setData(self.timestamps, self.vib_speed_y)
-        self.speed_z_curve.setData(self.timestamps, self.vib_speed_z)
-        self.disp_x_curve.setData(self.timestamps, self.vib_disp_x)
-        self.disp_y_curve.setData(self.timestamps, self.vib_disp_y)
-        self.disp_z_curve.setData(self.timestamps, self.vib_disp_z)
-        self.freq_x_curve.setData(self.timestamps, self.vib_freq_x)
-        self.freq_y_curve.setData(self.timestamps, self.vib_freq_y)
-        self.freq_z_curve.setData(self.timestamps, self.vib_freq_z)
-        
+            # 加速度曲线
+            self.accel_x_curve.setData(self.timestamps, self.accel_x)
+            self.accel_y_curve.setData(self.timestamps, self.accel_y)
+            self.accel_z_curve.setData(self.timestamps, self.accel_z)
+            # 其他曲线
+            self.speed_x_curve.setData(self.timestamps, self.vib_speed_x)
+            self.speed_y_curve.setData(self.timestamps, self.vib_speed_y)
+            self.speed_z_curve.setData(self.timestamps, self.vib_speed_z)
+            self.disp_x_curve.setData(self.timestamps, self.vib_disp_x)
+            self.disp_y_curve.setData(self.timestamps, self.vib_disp_y)
+            self.disp_z_curve.setData(self.timestamps, self.vib_disp_z)
+            self.freq_x_curve.setData(self.timestamps, self.vib_freq_x)
+            self.freq_y_curve.setData(self.timestamps, self.vib_freq_y)
+            self.freq_z_curve.setData(self.timestamps, self.vib_freq_z)
+
+    def open_analysis_window(self):
+        """打开高级分析窗口,并传递数据"""
+        data_cache = {
+            'timestamps': self.timestamps.copy(),
+            '加速度X': self.accel_x.copy(),
+            '加速度Y': self.accel_y.copy(),
+            '加速度Z': self.accel_z.copy(),
+            '速度X': self.vib_speed_x.copy(),
+            '速度Y': self.vib_speed_y.copy(),
+            '速度Z': self.vib_speed_z.copy(),
+            '位移X': self.vib_disp_x.copy(),
+            '位移Y': self.vib_disp_y.copy(),
+            '位移Z': self.vib_disp_z.copy(),
+            '频率X': self.vib_freq_x.copy(),
+            '频率Y': self.vib_freq_y.copy(),
+            '频率Z': self.vib_freq_z.copy(),
+            '温度':self.temperature_data.copy()
+
+        }
+        self.data_to_analysis.emit(data_cache)  # 发送数据
+        self.analysis_window.show()
 
     def toggle_recording(self):
         if self.recorder.is_recording:
@@ -561,7 +698,12 @@ class VibrationMonitor(QMainWindow):
         self.recorder.stop_recording()  # 停止记录
         self.device.stopLoopRead()
         self.device.closeDevice()
+        self.analysis_window.close() # 关闭分析窗口
         super().closeEvent(event)
+# 其余部分代码与之前相同 (DataRecorder, DataSignal, main 函数) ...
+
+#重用之前的DataRecorder 和 DataSignal 类
+
 def main():
     try:
         # 初始化设备
@@ -590,3 +732,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
