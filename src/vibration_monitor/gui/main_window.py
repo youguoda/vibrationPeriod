@@ -55,7 +55,7 @@ class VibrationMonitorWindow(QMainWindow):
         self.update_timer.timeout.connect(self.update_data)
         update_interval = 50  # 更新间隔,为了显示流畅,可以适当调小
         self.update_timer.start(update_interval)
-        print(f"Debug: update_timer started: {self.update_timer.isActive()}")
+        # print(f"Debug: update_timer started: {self.update_timer.isActive()}")
         # 记录器
         self.recorder = DataRecorder(self.device)
         # 数据缓存
@@ -284,11 +284,11 @@ class VibrationMonitorWindow(QMainWindow):
 
     def update_data(self):
         """更新数据 (由定时器触发)"""
-        print("Debug: update_data called") 
+        # print("Debug: update_data called") 
         try:
             # 获取数据
             accel_x = safe_float(self.device.get_data("52"))
-            print(f"Debug: accel_x = {accel_x}")
+            # print(f"Debug: accel_x = {accel_x}")
             accel_y = safe_float(self.device.get_data("53"))
             accel_z = safe_float(self.device.get_data("54"))
             vib_x = safe_float(self.device.get_data("58"))

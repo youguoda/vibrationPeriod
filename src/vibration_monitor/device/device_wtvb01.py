@@ -163,7 +163,7 @@ class DeviceWTVB01(DeviceModel):
         max_consecutive_errors = 5
 
         while self.loop:
-            print("Debug: _read_data_loop is running")  # 调试输出
+            # print("Debug: _read_data_loop is running")  # 调试输出
             try:
                 if not self.is_open or not self.serial_port or not self.serial_port.is_open:
                     logger.error("设备未连接或串口未打开")
@@ -274,9 +274,9 @@ class DeviceWTVB01(DeviceModel):
 
         此方法模拟了 vibration_monitor_gui.py 中 revData 函数的逻辑。
         """
-        print(f"Debug: _on_data_received called, data: {data}") 
+        # print(f"Debug: _on_data_received called, data: {data}") 
         self.receive_buffer.extend(data)  # 将接收到的数据添加到缓冲区
-        print(f"Debug: receive_buffer: {self.receive_buffer}")
+        # print(f"Debug: receive_buffer: {self.receive_buffer}")
 
         while len(self.receive_buffer) >= 8:  # 至少有8个字节才能进行处理 (最小数据包长度)
             if self.receive_buffer[0] != self.address:  # 地址不匹配
@@ -314,7 +314,7 @@ class DeviceWTVB01(DeviceModel):
 
     def _process_data(self, packet: List[int]):
         """解析数据 (内部方法)"""
-        print(f"Debug: _process_data called, packet: {packet}")
+        # print(f"Debug: _process_data called, packet: {packet}")
         data_length = packet[2]
         if data_length % 2 != 0:
             logger.error(f"数据长度错误: {data_length}，应为偶数")
@@ -379,7 +379,7 @@ class DeviceWTVB01(DeviceModel):
 
                 self._set_data(key, value)
                 start_reg += 1
-                print(f"Debug: self.data in _process_data: {self.data}")
+                # print(f"Debug: self.data in _process_data: {self.data}")
         except Exception as e:
             logger.exception(f"解析数据时发生错误: {e}")
             raise DataAcquisitionError("解析数据时发生错误") from e

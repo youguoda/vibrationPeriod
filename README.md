@@ -63,7 +63,7 @@
 1. 克隆项目代码
 
 ```bash
-git clone [项目地址]
+git clone https://github.com/youguoda/vibrationPeriod.git
 ```
 
 2. 安装依赖
@@ -80,7 +80,7 @@ pip install -r requirements.txt
 device_name = WTVB01
 port = COM5
 baudrate = 230400
-address = 0x50
+address = 80
 ```
 
 ## 使用说明
@@ -88,7 +88,7 @@ address = 0x50
 ### 启动程序
 
 ```bash
-python -m vibration_monitor
+python -m src.vibration_monitor.main
 ```
 
 ### 基本操作流程
