@@ -1,0 +1,14 @@
+# 忽略 Python 编译缓存目录
+__pycache__/
+
+# 忽略所有 .pyc 文件（包括 CPython 变体）
+*.pyc
+
+# 按需忽略特定格式的编译文件，如果有其他变体
+*.cpython-*
+
+# 忽略所有 .log 文件
+*.log
+
+# 忽略 .idea 文件夹（JetBrains IDE 配置目录）
+.idea/
