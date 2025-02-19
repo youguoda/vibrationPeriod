@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QGridLayout, QGroupBox, QTableWidget,
                              QTableWidgetItem, QPushButton, QMessageBox)
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, QEvent
 from PyQt5.QtGui import QBrush, QColor
 import pyqtgraph as pg
 import numpy as np
@@ -48,7 +48,10 @@ class VibrationMonitorWindow(QMainWindow):
             'temperature': self.config.getfloat('Thresholds', 'temperature', fallback=50.0)
         }
 
-
+        self.record_start_time = None  # 添加记录开始时间属性
+        self.record_time_label = None  # 添加记录时间显示标签
+        self.record_timer = QTimer()  # 添加计时器
+        self.record_timer.timeout.connect(self.update_record_time)
         self.init_ui() #界面
          # 数据更新定时器
         self.update_timer = QTimer()
@@ -122,7 +125,7 @@ class VibrationMonitorWindow(QMainWindow):
                 border: 1px solid #cccccc;
             }
             QPushButton {
-                font-size: 10pt;
+                font-size: 16pt;
                 color: #333333;
                 background-color: #e0e0e0;
                 border: 1px solid #cccccc;
@@ -251,10 +254,15 @@ class VibrationMonitorWindow(QMainWindow):
 
         # 创建按钮布局
         button_layout = QVBoxLayout()
+        # 添加记录时间显示标签
+        self.record_time_label = QLabel("记录时间: 00:00:00")
+        self.record_time_label.setStyleSheet("font-size: 14pt; color: #333333;")
+        button_layout.addWidget(self.record_time_label)
+        # 添加开始/停止记录按钮
         self.record_button = QPushButton("开始记录")
         self.record_button.clicked.connect(self.toggle_recording)
         button_layout.addWidget(self.record_button)
-
+        # 添加高级分析按钮
         self.analysis_button = QPushButton("高级分析")
         self.analysis_button.clicked.connect(self.open_analysis_window)
         button_layout.addWidget(self.analysis_button)
@@ -281,7 +289,14 @@ class VibrationMonitorWindow(QMainWindow):
         plot.getAxis('bottom').setTextPen('k')
         plot.getAxis('left').setTextPen('k')
         return plot
-
+    def update_record_time(self):
+        """更新记录时间显示"""
+        if self.record_start_time:
+            elapsed = datetime.now() - self.record_start_time
+            hours = elapsed.seconds // 3600
+            minutes = (elapsed.seconds % 3600) // 60
+            seconds = elapsed.seconds % 60
+            self.record_time_label.setText(f"记录时间: {hours:02d}:{minutes:02d}:{seconds:02d}")
     def update_data(self):
         """更新数据 (由定时器触发)"""
         # print("Debug: update_data called") 
@@ -461,16 +476,23 @@ class VibrationMonitorWindow(QMainWindow):
         self.freq_z_curve.setData(self.timestamps, self.vib_freq_z)
 
     def toggle_recording(self):
-      """切换记录状态"""
-      if self.recorder.is_recording:
-          reply = QMessageBox.question(self, '停止记录', '确定要停止记录数据吗?',
-                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-          if reply == QMessageBox.Yes:
-              self.recorder.stop_recording()
-              self.record_button.setText("开始记录")
-      else:
-          if self.recorder.start_recording():
-              self.record_button.setText("停止记录")
+    # 切换记录状态
+        if self.recorder.is_recording:
+            reply = QMessageBox.question(self, '停止记录', '确定要停止记录数据吗?',
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.recorder.stop_recording()
+                self.record_button.setText("开始记录")
+                self.record_timer.stop()  # 停止计时器
+                self.record_start_time = None  # 重置开始时间
+                self.record_time_label.setText("记录时间: 00:00:00")  # 重置显示
+        else:
+            if self.recorder.start_recording():
+                self.record_button.setText("停止记录")
+                self.record_start_time = datetime.now()  # 设置开始时间
+                self.record_timer.start(1000)  # 启动计时器，每秒更新一次
+
+
     def open_analysis_window(self):
       """打开高级分析窗口"""
 
