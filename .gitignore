@@ -12,3 +12,6 @@ __pycache__/
 
 # 忽略 .idea 文件夹（JetBrains IDE 配置目录）
 .idea/
+
+# 忽略 .csv 文件
+*.csv
