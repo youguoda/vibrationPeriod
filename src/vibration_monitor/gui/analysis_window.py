@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QLabel, QTabWidget, QComboBox, QPushButton,
-                             QMessageBox, QDoubleSpinBox, QFormLayout, QLineEdit,
-                             QTableWidget, QTableWidgetItem, QDialog)
+                          QLabel, QTabWidget, QComboBox, QPushButton,
+                          QMessageBox, QDoubleSpinBox, QFormLayout, QLineEdit,
+                          QTableWidget, QTableWidgetItem, QDialog, QDialogButtonBox)
 import pyqtgraph as pg
 import numpy as np
 from scipy.fft import fft, fftfreq
@@ -52,6 +52,17 @@ class AnalysisWindow(QMainWindow):
         self.setWindowTitle("高级数据分析")
         self.setGeometry(200, 200, 1200, 800)  # 调整窗口大小
         self.main_data_cache: Dict[str, Union[List[float], List[int]]] = {}  # 用于接收主窗口数据, 明确类型
+        self.thresholds = {
+                'threshold1': 20,    # 初始 -> 快速下料 (振动幅度)
+                'threshold2': 10,    # 初始 -> 快速下料 (振动速度)
+                'threshold3': 5,     # 快速下料 - > 慢速下料
+                'threshold4': -2,   #快速下料 -> 慢速下料 (振动速度变化率)
+                "threshold5" : 50,   # 慢速下料 -> 停止 (估计剩余重量)
+                'threshold6': 2,     # 停止下料 -> 稳定 (振动幅度)
+                'threshold7': 1,      # 停止下料 -> 稳定  (振动幅度)
+                'threshold8': 5,   #补料判断
+                'threshold9': 2, #补料判断
+            }
         self.init_ui()
 
 
@@ -455,7 +466,7 @@ class AnalysisWindow(QMainWindow):
              logger.warning("时间数据与选择的信号数据长度不一致,已自动截断")
         try:
             yf = fft(series_data)
-            xf = fftfreq(N, time_data[1] - time_data[0])  # 假设是等间距采样
+            xf = fftfreq(N, time_data[1] - time_data[0])  
 
             # 只取正频率
             xf_pos = xf[:N // 2]
@@ -471,7 +482,10 @@ class AnalysisWindow(QMainWindow):
 
     def open_threshold_dialog(self):
         """打开阈值设置对话框"""
+
         dialog = ThresholdDialog(self.thresholds, self)  # thresholds 是一个字典，存储阈值
+        dialog.show()
+        logger.debug(f"当前阈值: {self.thresholds}")
         if dialog.exec_():
             self.thresholds = dialog.get_thresholds()
             logger.debug(f"用户更新了阈值: {self.thresholds}")
@@ -484,7 +498,7 @@ class AnalysisWindow(QMainWindow):
         tolerance = self.tolerance_edit.value()
         time_data = self.main_data_cache.get('timestamps')
         series_data = self.main_data_cache.get(selected_param)
-
+        # 检查数据是否足够
         if not time_data or not series_data:
             QMessageBox.warning(self, "警告", "数据不足")
             return
@@ -494,20 +508,6 @@ class AnalysisWindow(QMainWindow):
 
         # 初始化状态机和阈值
         state = "Initial"
-        # 示例阈值,根据实际情况调整
-        if not hasattr(self,"thresholds"):
-            self.thresholds = {
-                'threshold1': 20,    # 初始 -> 快速下料 (振动幅度)
-                'threshold2': 10,    # 初始 -> 快速下料 (振动速度)
-                'threshold3': 5,     # 快速下料 - > 慢速下料
-                'threshold4': -2,   #快速下料 -> 慢速下料 (振动速度变化率)
-                "threshold5" : 50,   # 慢速下料 -> 停止 (估计剩余重量)
-                'threshold6': 2,     # 停止下料 -> 稳定 (振动幅度)
-                'threshold7': 1,      # 停止下料 -> 稳定  (振动幅度)
-                'threshold8': 5,   #补料判断
-                'threshold9': 2, #补料判断
-            }
-
         # 存储状态序列，用于绘图
         state_sequence = []
 
@@ -594,4 +594,3 @@ class AnalysisWindow(QMainWindow):
         """接收来自主窗口的数据"""
         self.main_data_cache = data_cache
         logger.debug(f"接收到来自主窗口的数据: {len(data_cache)} 个键")
-
