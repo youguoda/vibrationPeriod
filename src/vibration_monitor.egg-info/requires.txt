@@ -1,0 +1,6 @@
+numpy
+PyQt5
+PyQt5_sip
+pyqtgraph
+pyserial
+scipy

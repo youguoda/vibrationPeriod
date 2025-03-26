@@ -1,0 +1,2 @@
+[console_scripts]
+vibration-monitor = vibration_monitor.main:main

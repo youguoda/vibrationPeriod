@@ -1,3 +1,21 @@
+Metadata-Version: 2.1
+Name: vibration_monitor
+Version: 1.0.0
+Summary: 振动监测系统
+Author: Your Name
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: PyQt5
+Requires-Dist: PyQt5_sip
+Requires-Dist: pyqtgraph
+Requires-Dist: pyserial
+Requires-Dist: scipy
+
 # 振动监测系统
 
 ## 项目简介
@@ -86,34 +104,10 @@ address = 80
 ## 使用说明
 
 ### 启动程序
-方法一：
 
 ```bash
-python -m vibration_monitor.main
+python -m src.vibration_monitor.main
 ```
-
-方法二：
-在 setup.py 中定义了 entry_points，安装包后会自动生成一个可执行命令行脚本，直接运行即可。
-
-**步骤：**
-
-1. 安装你的包
-
-   （进入setup.py所在目录）：
-
-   ```shell
-   pip install -e .
-   ```
-
-   - `-e` 表示“开发模式”，修改代码后无需重新安装。
-
-2. 运行命令
-
-   ```shell
-   vibration-monitor
-   ```
-
-   - 这会自动调用 `vibration_monitor.main:main()` 函数。
 
 ### 基本操作流程
 
