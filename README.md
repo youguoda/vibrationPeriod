@@ -115,6 +115,11 @@ python -m vibration_monitor.main
 
    - 这会自动调用 `vibration_monitor.main:main()` 函数。
 
+| 方法 | 适用场景                   | 命令 |
+| ------ | ---------------------------- | ------ |
+| **`console_scripts`**     | 正式使用（安装后全局可用） | `vibration-monitor`     |
+| **直接运行** **`main.py`**    | 开发调试                   | `python -m vibration_monitor.main`     |
+
 ### 基本操作流程
 
 1. 连接设备
@@ -208,7 +213,7 @@ vibration_monitor/
 
 ## 许可证
 
-私人
+MIT License
 
 ## 联系方式
 
