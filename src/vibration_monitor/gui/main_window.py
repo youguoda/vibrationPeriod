@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QGridLayout, QGroupBox, QTableWidget,
-                             QTableWidgetItem, QPushButton, QMessageBox)
+                             QTableWidgetItem, QPushButton, QMessageBox, QFileDialog)  # 添加 QFileDialog
 from PyQt5.QtCore import QTimer, Qt, QEvent
 from PyQt5.QtGui import QBrush, QColor
 import pyqtgraph as pg
 import numpy as np
 from datetime import datetime
+import csv  # 添加 csv 模块导入
 from ..device.device_model import DeviceModel  # 导入 DeviceModel 基类
 from ..data_recorder import DataRecorder #导入数据记录
 from ..utils.data_utils import safe_float
@@ -266,6 +267,10 @@ class VibrationMonitorWindow(QMainWindow):
         self.analysis_button = QPushButton("高级分析")
         self.analysis_button.clicked.connect(self.open_analysis_window)
         button_layout.addWidget(self.analysis_button)
+        # 在button_layout中添加导入数据按钮（在高级分析按钮之后）
+        self.import_button = QPushButton("导入数据")
+        self.import_button.clicked.connect(self.import_data)
+        button_layout.addWidget(self.import_button)
 
         button_layout.addStretch()  # 添加弹性空间
 
@@ -531,4 +536,91 @@ class VibrationMonitorWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def import_data(self):
+        """导入并显示CSV数据文件"""
+        try:
+            # 停止传感器和定时器
+            self.update_timer.stop()
+            self.device.stop_data_acquisition()
+            
+            # 打开文件对话框
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "选择数据文件",
+                "",
+                "CSV Files (*.csv);;All Files (*)"
+            )
+            
+            if file_path:
+                import pandas as pd
+                # 读取CSV文件
+                try:
+                    df = pd.read_csv(file_path)
+                    if '记录时间' not in df.columns or len(df.columns) < 17:
+                        raise ValueError("CSV文件格式不正确")
+                    
+                    # 清空现有数据
+                    self.timestamps.clear()
+                    self.accel_x.clear()
+                    self.accel_y.clear()
+                    self.accel_z.clear()
+                    self.vib_speed_x.clear()
+                    self.vib_speed_y.clear()
+                    self.vib_speed_z.clear()
+                    self.vib_disp_x.clear()
+                    self.vib_disp_y.clear()
+                    self.vib_disp_z.clear()
+                    self.vib_freq_x.clear()
+                    self.vib_freq_y.clear()
+                    self.vib_freq_z.clear()
+                    self.temperature_data.clear()
+                    
+                    # 转换时间戳
+                    base_time = pd.to_datetime(df['记录时间'].iloc[0])
+                    timestamps = pd.to_datetime(df['记录时间'])
+                    time_diffs = (timestamps - base_time).dt.total_seconds()
+                    
+                    # 添加数据
+                    self.timestamps.extend(time_diffs.tolist())
+                    self.accel_x.extend(df['加速度X(g)'].tolist())
+                    self.accel_y.extend(df['加速度Y(g)'].tolist())
+                    self.accel_z.extend(df['加速度Z(g)'].tolist())
+                    self.vib_speed_x.extend(df['X轴振动速度(mm/s)'].tolist())
+                    self.vib_speed_y.extend(df['Y轴振动速度(mm/s)'].tolist())
+                    self.vib_speed_z.extend(df['Z轴振动速度(mm/s)'].tolist())
+                    self.vib_disp_x.extend(df['X轴振动位移(um)'].tolist())
+                    self.vib_disp_y.extend(df['Y轴振动位移(um)'].tolist())
+                    self.vib_disp_z.extend(df['Z轴振动位移(um)'].tolist())
+                    self.vib_freq_x.extend(df['X轴振动频率(Hz)'].tolist())
+                    self.vib_freq_y.extend(df['Y轴振动频率(Hz)'].tolist())
+                    self.vib_freq_z.extend(df['Z轴振动频率(Hz)'].tolist())
+                    self.temperature_data.extend(df['温度(°C)'].tolist())
+                    
+                    # 更新显示
+                    self.update_data_table(
+                        self.accel_x[-1], self.accel_y[-1], self.accel_z[-1],
+                        self.vib_speed_x[-1], self.vib_speed_y[-1], self.vib_speed_z[-1],
+                        self.vib_disp_x[-1], self.vib_disp_y[-1], self.vib_disp_z[-1],
+                        self.vib_freq_x[-1], self.vib_freq_y[-1], self.vib_freq_z[-1],
+                        self.temperature_data[-1]
+                    )
+                    self.update_stats_table()
+                    self.update_plots()
+                    
+                    QMessageBox.information(self, "导入成功", f"已成功导入 {len(df)} 条数据记录！")
+                    
+                except pd.errors.EmptyDataError:
+                    QMessageBox.warning(self, "导入错误", "所选文件为空！")
+                except ValueError as ve:
+                    QMessageBox.warning(self, "导入错误", str(ve))
+                except Exception as e:
+                    QMessageBox.critical(self, "导入错误", f"导入数据时发生错误：{str(e)}")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"操作失败：{str(e)}")
+        finally:
+            # 重新启动数据采集
+            self.device.start_data_acquisition()
+            self.update_timer.start()
 

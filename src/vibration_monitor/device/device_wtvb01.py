@@ -112,22 +112,40 @@ class DeviceWTVB01(DeviceModel):
                 raise DeviceConnectionError(error_msg) from e
 
     def close_device(self):
-        """关闭设备连接"""
+        """
+        关闭设备连接
+
+        此方法用于关闭设备的连接，在关闭连接前会先停止数据采集，
+        然后尝试关闭串口连接，并在操作完成后将设备状态标记为已关闭。
+        """
+        # 记录日志，表明正在尝试关闭设备
         logger.info(f"正在关闭设备: {self.device_name}")
+        # 调用停止数据采集的方法，确保在关闭设备前停止数据采集
         self.stop_data_acquisition()  #先停数据采集
+        # 检查串口对象是否存在
         if self.serial_port:
             try:
+                # 检查串口是否处于打开状态
                 if self.serial_port.is_open:
+                    # 清空输入缓冲区，确保没有残留数据
                     self.serial_port.reset_input_buffer()
+                    # 清空输出缓冲区，确保没有待发送的数据
                     self.serial_port.reset_output_buffer()
+                    # 关闭串口连接
                     self.serial_port.close()
+                    # 记录日志，表明串口已成功关闭
                     logger.info("串口已关闭")
             except Exception as e:
+                # 记录异常信息，表明关闭串口时出现错误
                  logger.exception(f"关闭串口失败: {e}")
             finally:
+                # 无论关闭操作是否成功，都将串口对象设置为 None
                self.serial_port = None  # 确保 serial_port 被设置为 None
+        # 将设备的打开状态标记为 False，表示设备已关闭
         self.is_open = False
+        # 记录日志，表明设备已成功关闭
         logger.info(f"设备已关闭: {self.device_name}")
+
 
     def start_data_acquisition(self):
         """启动数据采集"""
@@ -391,8 +409,19 @@ class DeviceWTVB01(DeviceModel):
 
     # 保存
     def _save(self):
+        """
+        保存设备的设置
+
+        此方法通过向设备发送特定的写入命令来保存当前的设置。
+        具体来说，它会调用 _get_write_bytes 方法生成一个写入指令，
+        该指令将地址 0x00 的寄存器设置为 0x0000，然后通过 _send_data 方法发送该指令。
+        """
+        # 生成写入指令，将地址 0x00 的寄存器设置为 0x0000
         cmd = self._get_write_bytes(self.address, 0x00, 0x0000)
+        # 发送写入指令到设备
         self._send_data(cmd)
+
+
 
         
     @staticmethod

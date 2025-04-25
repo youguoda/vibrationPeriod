@@ -15,7 +15,7 @@ def main():
 
         # 从配置文件读取设备参数
         device_name = config.get('Device', 'device_name', fallback="未知设备")
-        port = config.get('Device', 'port', fallback="COM5")
+        port = config.get('Device', 'port', fallback="COM9")
         baudrate = config.getint('Device', 'baudrate', fallback=230400)
         address = config.getint('Device', 'address', fallback=0x50)
 
