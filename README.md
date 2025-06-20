@@ -86,6 +86,7 @@ address = 80
 ## 使用说明
 
 ### 启动程序
+
 方法一：
 
 ```bash
@@ -105,7 +106,7 @@ python -m vibration_monitor.main
    pip install -e .
    ```
 
-   - `-e` 表示“开发模式”，修改代码后无需重新安装。
+   * `-e` 表示“开发模式”，修改代码后无需重新安装。
 
 2. 运行命令
 
@@ -113,7 +114,7 @@ python -m vibration_monitor.main
    vibration-monitor
    ```
 
-   - 这会自动调用 `vibration_monitor.main:main()` 函数。
+   * 这会自动调用 `vibration_monitor.main:main()` 函数。
 
 | 方法 | 适用场景                   | 命令 |
 | ------ | ---------------------------- | ------ |

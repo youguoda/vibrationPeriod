@@ -146,30 +146,7 @@ class VibrationMonitorWindow(QMainWindow):
         # 创建网格布局
         grid_layout = QGridLayout()
 
-        # 1. 振动速度图
-        speed_group = QGroupBox("振动速度")
-        speed_layout = QVBoxLayout()
-        self.speed_plot = self.create_plot_widget('', '速度', 'mm/s')
-        self.speed_x_curve = self.speed_plot.plot(pen=pg.mkPen('r', width=2), name='X轴')
-        self.speed_y_curve = self.speed_plot.plot(pen=pg.mkPen('g', width=2), name='Y轴')
-        self.speed_z_curve = self.speed_plot.plot(pen=pg.mkPen('b', width=2), name='Z轴')
-        speed_layout.addWidget(self.speed_plot)
-        speed_group.setLayout(speed_layout)
-        grid_layout.addWidget(speed_group, 0, 0)#
-
-        # 2. 加速度图
-        accel_group = QGroupBox("加速度")
-        accel_layout = QVBoxLayout()
-        self.accel_plot = self.create_plot_widget('', '加速度', 'g')  # 使用 'g' 作为单位
-        self.accel_x_curve = self.accel_plot.plot(pen=pg.mkPen('r', width=2), name='X轴')
-        self.accel_y_curve = self.accel_plot.plot(pen=pg.mkPen('g', width=2), name='Y轴')
-        self.accel_z_curve = self.accel_plot.plot(pen=pg.mkPen('b', width=2), name='Z轴')
-        accel_layout.addWidget(self.accel_plot)
-        accel_group.setLayout(accel_layout)
-        grid_layout.addWidget(accel_group, 0, 1)  # 放置在原来的角度图位置
-
-
-        # 3. 振动位移图
+        # 振动位移图
         disp_group = QGroupBox("振动位移")
         disp_layout = QVBoxLayout()
         self.disp_plot = self.create_plot_widget('', '位移', 'μm')
@@ -178,9 +155,31 @@ class VibrationMonitorWindow(QMainWindow):
         self.disp_z_curve = self.disp_plot.plot(pen=pg.mkPen('b', width=2), name='Z轴')
         disp_layout.addWidget(self.disp_plot)
         disp_group.setLayout(disp_layout)
-        grid_layout.addWidget(disp_group, 1, 0)
+        grid_layout.addWidget(disp_group, 0, 0)
 
-        # 4. 振动频率图
+        # 振动速度图
+        speed_group = QGroupBox("振动速度")
+        speed_layout = QVBoxLayout()
+        self.speed_plot = self.create_plot_widget('', '速度', 'mm/s')
+        self.speed_x_curve = self.speed_plot.plot(pen=pg.mkPen('r', width=2), name='X轴')
+        self.speed_y_curve = self.speed_plot.plot(pen=pg.mkPen('g', width=2), name='Y轴')
+        self.speed_z_curve = self.speed_plot.plot(pen=pg.mkPen('b', width=2), name='Z轴')
+        speed_layout.addWidget(self.speed_plot)
+        speed_group.setLayout(speed_layout)
+        grid_layout.addWidget(speed_group, 0, 1)#
+
+        # 加速度图
+        accel_group = QGroupBox("加速度")
+        accel_layout = QVBoxLayout()
+        self.accel_plot = self.create_plot_widget('', '加速度', 'g')  # 使用 'g' 作为单位
+        self.accel_x_curve = self.accel_plot.plot(pen=pg.mkPen('r', width=2), name='X轴')
+        self.accel_y_curve = self.accel_plot.plot(pen=pg.mkPen('g', width=2), name='Y轴')
+        self.accel_z_curve = self.accel_plot.plot(pen=pg.mkPen('b', width=2), name='Z轴')
+        accel_layout.addWidget(self.accel_plot)
+        accel_group.setLayout(accel_layout)
+        grid_layout.addWidget(accel_group, 1, 0)  # 放置在原来的角度图位置
+
+        # 振动频率图
         freq_group = QGroupBox("振动频率")
         freq_layout = QVBoxLayout()
         self.freq_plot = self.create_plot_widget('', '频率', 'Hz')
@@ -278,6 +277,7 @@ class VibrationMonitorWindow(QMainWindow):
 
         # 将表格和按钮的布局添加到主布局
         main_layout.addLayout(table_button_layout)
+    
     def create_plot_widget(self, title, y_label, y_units):
         """创建绘图部件"""
         plot = pg.PlotWidget(title=title)
@@ -294,6 +294,7 @@ class VibrationMonitorWindow(QMainWindow):
         plot.getAxis('bottom').setTextPen('k')
         plot.getAxis('left').setTextPen('k')
         return plot
+    
     def update_record_time(self):
         """更新记录时间显示"""
         if self.record_start_time:
@@ -302,6 +303,7 @@ class VibrationMonitorWindow(QMainWindow):
             minutes = (elapsed.seconds % 3600) // 60
             seconds = elapsed.seconds % 60
             self.record_time_label.setText(f"记录时间: {hours:02d}:{minutes:02d}:{seconds:02d}")
+    
     def update_data(self):
         """更新数据 (由定时器触发)"""
         # print("Debug: update_data called") 
@@ -496,7 +498,6 @@ class VibrationMonitorWindow(QMainWindow):
                 self.record_button.setText("停止记录")
                 self.record_start_time = datetime.now()  # 设置开始时间
                 self.record_timer.start(1000)  # 启动计时器，每秒更新一次
-
 
     def open_analysis_window(self):
       """打开高级分析窗口"""
