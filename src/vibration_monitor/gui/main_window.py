@@ -14,8 +14,6 @@ from ..utils.signal import Signal
 from .analysis_window import AnalysisWindow #导入分析窗口
 from ..config import Config
 from ..utils.logger import setup_logger
-from ..utils.collector_server import SocketMaster  # 导入 SocketMaster 类
-from ..utils.SignalManager import signalManager  # 导入 SocketMaster 类
 # 创建一个 logger 实例
 logger = setup_logger(__name__)
 
@@ -91,8 +89,6 @@ class VibrationMonitorWindow(QMainWindow):
            # 创建高级分析窗口的实例
         self.analysis_window = AnalysisWindow()
         self.data_to_analysis.connect(self.analysis_window.receive_data_from_main)
-        self.master = None  # 主站连接
-        self.set_master_socket()  # 设置主站连接
 
     def init_ui(self):
         """初始化用户界面"""
@@ -281,11 +277,6 @@ class VibrationMonitorWindow(QMainWindow):
 
         # 将表格和按钮的布局添加到主布局
         main_layout.addLayout(table_button_layout)
-        self.__init_slot()  # 初始化槽函数
-
-    def __init_slot(self):
-        signalManager.StartSignal.connect(self.toggle_recording)
-        signalManager.StopSignal.connect(self.toggle_recording)
     
     def create_plot_widget(self, title, y_label, y_units):
         """创建绘图部件"""
@@ -494,14 +485,14 @@ class VibrationMonitorWindow(QMainWindow):
     def toggle_recording(self):
     # 切换记录状态
         if self.recorder.is_recording:
-            # reply = QMessageBox.question(self, '停止记录', '确定要停止记录数据吗?',
-            #                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            # if reply == QMessageBox.Yes:
-            self.recorder.stop_recording()
-            self.record_button.setText("开始记录")
-            self.record_timer.stop()  # 停止计时器
-            self.record_start_time = None  # 重置开始时间
-            self.record_time_label.setText("记录时间: 00:00:00")  # 重置显示
+            reply = QMessageBox.question(self, '停止记录', '确定要停止记录数据吗?',
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.recorder.stop_recording()
+                self.record_button.setText("开始记录")
+                self.record_timer.stop()  # 停止计时器
+                self.record_start_time = None  # 重置开始时间
+                self.record_time_label.setText("记录时间: 00:00:00")  # 重置显示
         else:
             if self.recorder.start_recording():
                 self.record_button.setText("停止记录")
@@ -531,28 +522,12 @@ class VibrationMonitorWindow(QMainWindow):
       self.data_to_analysis.emit(data_cache) #发送数据
       self.analysis_window.show()
 
-    def set_master_socket(self):
-        # 初始化socket主站连接
-        def handle_message(msg):
-            if msg == 'START':
-                print("[采集] 开始采集数据")
-                signalManager.StartSignal.emit()
-            elif msg == 'STOP':
-                print("[采集] 停止采集并分析数据")
-                signalManager.StopSignal.emit()
-            else:
-                print(f"[采集] 收到未知指令: {msg}")
-        self.master = SocketMaster(on_message=handle_message)
-        self.master.start()
-        logger.info("Socket 主站已启动，等待指令...")
-
     def closeEvent(self, event):
         """窗口关闭事件"""
         logger.info("应用程序正在关闭...")
         reply = QMessageBox.question(self, '退出程序', '确认退出程序吗?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.master.stop()
             self.update_timer.stop()
             self.device.stop_data_acquisition()
             self.device.close_device()
