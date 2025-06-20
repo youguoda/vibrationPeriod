@@ -53,6 +53,7 @@ class VibrationMonitorWindow(QMainWindow):
         self.record_time_label = None  # 添加记录时间显示标签
         self.record_timer = QTimer()  # 添加计时器
         self.record_timer.timeout.connect(self.update_record_time)
+        self.is_data_acquisition_active = True  # 数据采集状态标志
         self.init_ui() #界面
          # 数据更新定时器
         self.update_timer = QTimer()
@@ -258,6 +259,26 @@ class VibrationMonitorWindow(QMainWindow):
         self.record_time_label = QLabel("记录时间: 00:00:00")
         self.record_time_label.setStyleSheet("font-size: 14pt; color: #333333;")
         button_layout.addWidget(self.record_time_label)
+        
+        # 添加数据采集开始/停止按钮
+        self.acquisition_button = QPushButton("停止采集")
+        self.acquisition_button.setStyleSheet("""
+            QPushButton {
+                font-size: 16pt;
+                color: white;
+                background-color: #ff4444;
+                border: 2px solid #cc0000;
+                border-radius: 6px;
+                padding: 8px;
+                font-weight: bold;
+            }
+            QPushButton:pressed {
+                background-color: #cc0000;
+            }
+        """)
+        self.acquisition_button.clicked.connect(self.toggle_data_acquisition)
+        button_layout.addWidget(self.acquisition_button)
+        
         # 添加开始/停止记录按钮
         self.record_button = QPushButton("开始记录")
         self.record_button.clicked.connect(self.toggle_recording)
@@ -308,6 +329,10 @@ class VibrationMonitorWindow(QMainWindow):
         """更新数据 (由定时器触发)"""
         # print("Debug: update_data called") 
         try:
+            # 如果数据采集未激活，则跳过数据获取
+            if not self.is_data_acquisition_active:
+                return
+                
             # 获取数据
             accel_x = safe_float(self.device.get_data("52"))
             # print(f"Debug: accel_x = {accel_x}")
@@ -482,6 +507,57 @@ class VibrationMonitorWindow(QMainWindow):
         self.freq_y_curve.setData(self.timestamps, self.vib_freq_y)
         self.freq_z_curve.setData(self.timestamps, self.vib_freq_z)
 
+    def toggle_data_acquisition(self):
+        """切换数据采集状态"""
+        if self.is_data_acquisition_active:
+            # 当前正在采集，询问是否停止
+            reply = QMessageBox.question(self, '停止数据采集', 
+                                       '确定要停止数据采集吗？\n停止后将无法获取实时数据。',
+                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.is_data_acquisition_active = False
+                self.device.stop_data_acquisition()
+                self.acquisition_button.setText("开始采集")
+                self.acquisition_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 16pt;
+                        color: white;
+                        background-color: #44aa44;
+                        border: 2px solid #008800;
+                        border-radius: 6px;
+                        padding: 8px;
+                        font-weight: bold;
+                    }
+                    QPushButton:pressed {
+                        background-color: #008800;
+                    }
+                """)
+                logger.info("数据采集已停止")
+        else:
+            # 当前已停止，启动数据采集
+            try:
+                self.device.start_data_acquisition()
+                self.is_data_acquisition_active = True
+                self.acquisition_button.setText("停止采集")
+                self.acquisition_button.setStyleSheet("""
+                    QPushButton {
+                        font-size: 16pt;
+                        color: white;
+                        background-color: #ff4444;
+                        border: 2px solid #cc0000;
+                        border-radius: 6px;
+                        padding: 8px;
+                        font-weight: bold;
+                    }
+                    QPushButton:pressed {
+                        background-color: #cc0000;
+                    }
+                """)
+                logger.info("数据采集已启动")
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"启动数据采集失败：{str(e)}")
+                logger.error(f"启动数据采集失败: {e}")
+
     def toggle_recording(self):
     # 切换记录状态
         if self.recorder.is_recording:
@@ -494,6 +570,9 @@ class VibrationMonitorWindow(QMainWindow):
                 self.record_start_time = None  # 重置开始时间
                 self.record_time_label.setText("记录时间: 00:00:00")  # 重置显示
         else:
+            if not self.is_data_acquisition_active:
+                QMessageBox.warning(self, "警告", "请先启动数据采集后再开始记录！")
+                return
             if self.recorder.start_recording():
                 self.record_button.setText("停止记录")
                 self.record_start_time = datetime.now()  # 设置开始时间

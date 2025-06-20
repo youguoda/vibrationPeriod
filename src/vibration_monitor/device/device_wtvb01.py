@@ -1,6 +1,7 @@
 import threading
 import time
 import serial
+import threading
 from .device_model import DeviceModel  # 导入基类
 from ..exceptions import DeviceConnectionError, DataAcquisitionError
 from ..utils.logger import setup_logger  # 导入日志记录器
