@@ -291,6 +291,25 @@ class VibrationMonitorWindow(QMainWindow):
         self.import_button = QPushButton("导入数据")
         self.import_button.clicked.connect(self.import_data)
         button_layout.addWidget(self.import_button)
+        
+        # 添加数据清空按钮
+        self.clear_button = QPushButton("清空数据")
+        self.clear_button.setStyleSheet("""
+            QPushButton {
+                font-size: 14pt;
+                color: white;
+                background-color: #ff8800;
+                border: 2px solid #cc6600;
+                border-radius: 6px;
+                padding: 6px;
+                font-weight: bold;
+            }
+            QPushButton:pressed {
+                background-color: #cc6600;
+            }
+        """)
+        self.clear_button.clicked.connect(self.clear_all_data)
+        button_layout.addWidget(self.clear_button)
 
         button_layout.addStretch()  # 添加弹性空间
 
@@ -558,6 +577,61 @@ class VibrationMonitorWindow(QMainWindow):
                 QMessageBox.critical(self, "错误", f"启动数据采集失败：{str(e)}")
                 logger.error(f"启动数据采集失败: {e}")
 
+    def clear_all_data(self):
+        """清空所有数据和表格"""
+        reply = QMessageBox.question(self, '清空数据', 
+                                   '确定要清空所有数据吗？\n此操作将清空图表和表格中的所有数据，无法撤销。',
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                # 清空数据列表
+                self.timestamps.clear()
+                self.accel_x.clear()
+                self.accel_y.clear()
+                self.accel_z.clear()
+                self.vib_speed_x.clear()
+                self.vib_speed_y.clear()
+                self.vib_speed_z.clear()
+                self.vib_disp_x.clear()
+                self.vib_disp_y.clear()
+                self.vib_disp_z.clear()
+                self.vib_freq_x.clear()
+                self.vib_freq_y.clear()
+                self.vib_freq_z.clear()
+                self.temperature_data.clear()
+                
+                # 清空图表
+                self.accel_x_curve.setData([], [])
+                self.accel_y_curve.setData([], [])
+                self.accel_z_curve.setData([], [])
+                self.speed_x_curve.setData([], [])
+                self.speed_y_curve.setData([], [])
+                self.speed_z_curve.setData([], [])
+                self.disp_x_curve.setData([], [])
+                self.disp_y_curve.setData([], [])
+                self.disp_z_curve.setData([], [])
+                self.freq_x_curve.setData([], [])
+                self.freq_y_curve.setData([], [])
+                self.freq_z_curve.setData([], [])
+                
+                # 清空实时数据表格
+                for row in range(self.data_table.rowCount()):
+                    for col in range(1, self.data_table.columnCount()):
+                        self.data_table.setItem(row, col, QTableWidgetItem("-"))
+                
+                # 清空统计数据表格
+                for row in range(self.stats_table.rowCount()):
+                    for col in range(1, self.stats_table.columnCount()):
+                        self.stats_table.setItem(row, col, QTableWidgetItem("-"))
+                
+                logger.info("所有数据已清空")
+                QMessageBox.information(self, "成功", "所有数据已清空！")
+                
+            except Exception as e:
+                error_msg = f"清空数据时发生错误: {str(e)}"
+                logger.error(error_msg)
+                QMessageBox.critical(self, "错误", error_msg)
+ 
     def toggle_recording(self):
     # 切换记录状态
         if self.recorder.is_recording:
